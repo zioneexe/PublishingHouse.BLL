@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Service\NewFile1.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PublishingHouse.Abstractions\PublishingHouse.Abstractions.csproj" />
+    <ProjectReference Include="..\PublishingHouse.DAL\PublishingHouse.DAL.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Mapper\" />
+  </ItemGroup>
+
+</Project>
