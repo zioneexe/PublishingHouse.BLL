@@ -1,58 +1,44 @@
-﻿using PublishingHouse.Abstractions.Model;
+﻿using PublishingHouse.Abstractions.Entity;
 using PublishingHouse.Abstractions.Repository;
 using PublishingHouse.Abstractions.Service;
-using PublishingHouse.BLL.Mapper;
-using PublishingHouse.Shared.Model.Input;
-using PublishingHouse.Shared.Model.Output;
+using PublishingHouse.DAL.Data;
 
-namespace PublishingHouse.BLL.Service;
-
-public class CustomerTypeService(ICustomerTypeRepository repository) : ICustomerTypeService
+namespace PublishingHouse.BLL.Service
 {
-    public async Task<List<CustomerTypeOutput>> GetAllAsync()
+    public class CustomerTypeService(IUnitOfWork unitOfWork) : ICustomerTypeService
     {
-        var customerTypes = await repository.GetAllAsync();
-        return customerTypes.Select(customerType => customerType.ToOutputModel()).ToList();
-    }
+        public async Task<ICustomerType> GetByIdAsync(int id)
+        {
+            return await unitOfWork.CustomerTypes.GetByIdAsync(id);
+        }
 
-    public async Task<CustomerTypeOutput?> GetByIdAsync(int id)
-    {
-        var customerType = await repository.GetByIdAsync(id);
-        return customerType?.ToOutputModel();
-    }
+        public async Task<IEnumerable<ICustomerType>> GetAllAsync()
+        {
+            return await unitOfWork.CustomerTypes.GetAllAsync();
+        }
 
-    public async Task<CustomerTypeOutput> AddAsync(CustomerTypeInput customerTypeInput)
-    {
-        ArgumentNullException.ThrowIfNull(customerTypeInput, nameof(customerTypeInput));
+        public async Task AddAsync(ICustomerType entity)
+        {
+            ArgumentNullException.ThrowIfNull(entity, nameof(entity));
+            entity.CreateDateTime = DateTime.UtcNow;
 
-        var customerTypeEntity = customerTypeInput.ToEntity();
-        var createdCustomerType = await repository.AddAsync(customerTypeEntity);
-        return createdCustomerType.ToOutputModel();
-    }
+            await unitOfWork.CustomerTypes.AddAsync(entity);
+            await unitOfWork.CompleteAsync();
+        }
 
-    public async Task<CustomerTypeOutput?> UpdateAsync(int id, CustomerTypeInput customerTypeInput)
-    {
-        ArgumentNullException.ThrowIfNull(customerTypeInput, nameof(customerTypeInput));
+        public async Task UpdateAsync(int id, ICustomerType entity)
+        {
+            ArgumentNullException.ThrowIfNull(entity, nameof(entity));
+            entity.UpdateDateTime = DateTime.UtcNow;
 
-        var existingCustomerType = await repository.GetByIdAsync(id);
-        if (existingCustomerType == null) return null;
+            await unitOfWork.CustomerTypes.UpdateAsync(id, entity);
+            await unitOfWork.CompleteAsync();
+        }
 
-        var updatedEntity = customerTypeInput.ToEntity();
-        updatedEntity.CustomerTypeId = id;
-
-        var updatedCustomerType = await repository.UpdateAsync(id,updatedEntity);
-        return updatedCustomerType?.ToOutputModel();
-    }
-
-    public async Task<CustomerTypeOutput?> DeleteAsync(int id)
-    {
-        var customerType = await repository.DeleteAsync(id);
-        return customerType?.ToOutputModel();
-    }
-
-    public async Task<CustomerTypeOutput?> GetCustomerTypeWithCustomersAsync(int id)
-    {
-        throw new NotImplementedException();
+        public async Task DeleteAsync(int id)
+        {
+            await unitOfWork.CustomerTypes.DeleteAsync(id);
+            await unitOfWork.CompleteAsync();
+        }
     }
 }
-

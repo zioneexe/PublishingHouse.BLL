@@ -1,57 +1,44 @@
-﻿using PublishingHouse.Abstractions.Repository;
+﻿using PublishingHouse.Abstractions.Entity;
+using PublishingHouse.Abstractions.Repository;
 using PublishingHouse.Abstractions.Service;
-using PublishingHouse.BLL.Mapper;
-using PublishingHouse.Shared.Model.Input;
-using PublishingHouse.Shared.Model.Output;
+using PublishingHouse.DAL.Data;
 
-namespace PublishingHouse.BLL.Service;
-
-public class PositionService(IPositionRepository repository) : IPositionService
+namespace PublishingHouse.BLL.Service
 {
-    public async Task<List<PositionOutput>> GetAllAsync()
+    public class PositionService(IUnitOfWork unitOfWork) : IPositionService
     {
-        var positions = await repository.GetAllAsync();
-        return positions.Select(position => position.ToOutputModel()).ToList();
-    }
+        public async Task<IPosition> GetByIdAsync(int id)
+        {
+            return await unitOfWork.Positions.GetByIdAsync(id);
+        }
 
-    public async Task<PositionOutput?> GetByIdAsync(int id)
-    {
-        var position = await repository.GetByIdAsync(id);
-        return position?.ToOutputModel();
-    }
+        public async Task<IEnumerable<IPosition>> GetAllAsync()
+        {
+            return await unitOfWork.Positions.GetAllAsync();
+        }
 
-    public async Task<PositionOutput> AddAsync(PositionInput positionInput)
-    {
-        ArgumentNullException.ThrowIfNull(positionInput, nameof(positionInput));
+        public async Task AddAsync(IPosition entity)
+        {
+            ArgumentNullException.ThrowIfNull(entity, nameof(entity));
+            entity.CreateDateTime = DateTime.UtcNow;
 
-        var positionEntity = positionInput.ToEntity();
-        var createdPosition = await repository.AddAsync(positionEntity);
-        return createdPosition.ToOutputModel();
-    }
+            await unitOfWork.Positions.AddAsync(entity);
+            await unitOfWork.CompleteAsync();
+        }
 
-    public async Task<PositionOutput?> UpdateAsync(int id, PositionInput positionInput)
-    {
-        ArgumentNullException.ThrowIfNull(positionInput, nameof(positionInput));
+        public async Task UpdateAsync(int id, IPosition entity)
+        {
+            ArgumentNullException.ThrowIfNull(entity, nameof(entity));
+            entity.UpdateDateTime = DateTime.UtcNow;
 
-        var existingPosition = await repository.GetByIdAsync(id);
-        if (existingPosition == null) return null;
+            await unitOfWork.Positions.UpdateAsync(id, entity);
+            await unitOfWork.CompleteAsync();
+        }
 
-        var updatedEntity = positionInput.ToEntity();
-        updatedEntity.PositionId = id;
-
-        var updatedPosition = await repository.UpdateAsync(id, updatedEntity);
-        return updatedPosition?.ToOutputModel();
-    }
-
-    public async Task<PositionOutput?> DeleteAsync(int id)
-    {
-        var position = await repository.DeleteAsync(id);
-        return position?.ToOutputModel();
-    }
-
-    public async Task<PositionOutput?> GetPositionWithEmployeesAsync(int id)
-    {
-        throw new NotImplementedException();
+        public async Task DeleteAsync(int id)
+        {
+            await unitOfWork.Positions.DeleteAsync(id);
+            await unitOfWork.CompleteAsync();
+        }
     }
 }
-

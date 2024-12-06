@@ -1,58 +1,45 @@
-﻿using PublishingHouse.Abstractions.Model;
+﻿using PublishingHouse.Abstractions.Entity;
 using PublishingHouse.Abstractions.Repository;
 using PublishingHouse.Abstractions.Service;
-using PublishingHouse.BLL.Mapper;
-using PublishingHouse.Shared.Model.Input;
-using PublishingHouse.Shared.Model.Output;
+using PublishingHouse.DAL.Data;
 
-namespace PublishingHouse.BLL.Service;
-
-public class QualityMarkService(IQualityMarkRepository repository) : IQualityMarkService
+namespace PublishingHouse.BLL.Service
 {
-    public async Task<List<QualityMarkOutput>> GetAllAsync()
+    public class QualityMarkService(IUnitOfWork unitOfWork) : IQualityMarkService
     {
-        var qualityMarks = await repository.GetAllAsync();
-        return qualityMarks.Select(qualityMark => qualityMark.ToOutputModel()).ToList();
-    }
+        public async Task<IQualityMark> GetByIdAsync(int id)
+        {
+            return await unitOfWork.QualityMarks.GetByIdAsync(id);
+        }
 
-    public async Task<QualityMarkOutput?> GetByIdAsync(int id)
-    {
-        var qualityMark = await repository.GetByIdAsync(id);
-        return qualityMark?.ToOutputModel();
-    }
+        public async Task<IEnumerable<IQualityMark>> GetAllAsync()
+        {
+            return await unitOfWork.QualityMarks.GetAllAsync();
+        }
 
-    public async Task<QualityMarkOutput> AddAsync(QualityMarkInput qualityMarkInput)
-    {
-        ArgumentNullException.ThrowIfNull(qualityMarkInput, nameof(qualityMarkInput));
+        public async Task AddAsync(IQualityMark entity)
+        {
+            ArgumentNullException.ThrowIfNull(entity, nameof(entity));
+            entity.CreateDateTime = DateTime.UtcNow;
 
-        var qualityMarkEntity = qualityMarkInput.ToEntity();
-        var createdQualityMark = await repository.AddAsync(qualityMarkEntity);
-        return createdQualityMark.ToOutputModel();
-    }
+            await unitOfWork.QualityMarks.AddAsync(entity);
+            await unitOfWork.CompleteAsync();
+        }
 
-    public async Task<QualityMarkOutput?> UpdateAsync(int id, QualityMarkInput qualityMarkInput)
-    {
-        ArgumentNullException.ThrowIfNull(qualityMarkInput, nameof(qualityMarkInput));
+        public async Task UpdateAsync(int id, IQualityMark entity)
+        {
+            ArgumentNullException.ThrowIfNull(entity, nameof(entity));
+            entity.UpdateDateTime = DateTime.UtcNow;
 
-        var existingQualityMark = await repository.GetByIdAsync(id);
-        if (existingQualityMark == null) return null;
+            await unitOfWork.QualityMarks.UpdateAsync(id, entity);
+            await unitOfWork.CompleteAsync();
+        }
 
-        var updatedEntity = qualityMarkInput.ToEntity();
-        updatedEntity.QualityMarkId = id;
+        public async Task DeleteAsync(int id)
+        {
+            await unitOfWork.QualityMarks.DeleteAsync(id);
+            await unitOfWork.CompleteAsync();
+        }
 
-        var updatedQualityMark = await repository.UpdateAsync(id, updatedEntity);
-        return updatedQualityMark?.ToOutputModel();
-    }
-
-    public async Task<QualityMarkOutput?> DeleteAsync(int id)
-    {
-        var qualityMark = await repository.DeleteAsync(id);
-        return qualityMark?.ToOutputModel();
-    }
-
-    public async Task<QualityMarkOutput?> GetQualityMarkWithBatchPrintsAsync(int id)
-    {
-        throw new NotImplementedException();
     }
 }
-

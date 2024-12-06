@@ -1,58 +1,49 @@
-﻿using PublishingHouse.Abstractions.Model;
-using PublishingHouse.Abstractions.Repository;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.VisualBasic.CompilerServices;
+using PublishingHouse.Abstractions.Entity;
+using PublishingHouse.Abstractions.Exception;
 using PublishingHouse.Abstractions.Service;
-using PublishingHouse.BLL.Mapper;
-using PublishingHouse.Shared.Model.Input;
-using PublishingHouse.Shared.Model.Output;
+using PublishingHouse.DAL.Data;
 
-namespace PublishingHouse.BLL.Service;
-
-public class EmployeeService(IEmployeeRepository repository) : IEmployeeService
+namespace PublishingHouse.BLL.Service
 {
-    public async Task<List<EmployeeOutput>> GetAllAsync()
+    public class EmployeeService(IUnitOfWork unitOfWork) : IEmployeeService
     {
-        var employees = await repository.GetAllAsync();
-        return employees.Select(employee => employee.ToOutputModel()).ToList();
-    }
+        public async Task<IEmployee> GetByIdAsync(int id)
+        {
+            return await unitOfWork.Employees.GetByIdAsync(id);
+        }
 
-    public async Task<EmployeeOutput?> GetByIdAsync(int id)
-    {
-        var employee = await repository.GetByIdAsync(id);
-        return employee?.ToOutputModel();
-    }
+        public async Task<IEnumerable<IEmployee>> GetAllAsync()
+        {
+            return await unitOfWork.Employees.GetAllAsync();
+        }
 
-    public async Task<EmployeeOutput> AddAsync(EmployeeInput employeeInput)
-    {
-        ArgumentNullException.ThrowIfNull(employeeInput, nameof(employeeInput));
+        public async Task AddAsync(IEmployee entity)
+        {
+            entity.CreateDateTime = DateTime.UtcNow;
 
-        var employeeEntity = employeeInput.ToEntity();
-        var createdEmployee = await repository.AddAsync(employeeEntity);
-        return createdEmployee.ToOutputModel();
-    }
+            await unitOfWork.Employees.AddAsync(entity);
+            await unitOfWork.CompleteAsync();
+        }
 
-    public async Task<EmployeeOutput?> UpdateAsync(int id, EmployeeInput employeeInput)
-    {
-        ArgumentNullException.ThrowIfNull(employeeInput, nameof(employeeInput));
+        public async Task UpdateAsync(int id, IEmployee entity)
+        {
+            entity.UpdateDateTime = DateTime.UtcNow;
 
-        var existingEmployee = await repository.GetByIdAsync(id);
-        if (existingEmployee == null) return null;
+            await unitOfWork.Employees.UpdateAsync(id, entity);
+            await unitOfWork.CompleteAsync();
+        }
 
-        var updatedEntity = employeeInput.ToEntity();
-        updatedEntity.EmployeeId = id;
+        public async Task DeleteAsync(int id)
+        {
+            await unitOfWork.Employees.DeleteAsync(id);
+            await unitOfWork.CompleteAsync();
+        }
 
-        var updatedEmployee = await repository.UpdateAsync(id, updatedEntity);
-        return updatedEmployee?.ToOutputModel();
-    }
-
-    public async Task<EmployeeOutput?> DeleteAsync(int id)
-    {
-        var employee = await repository.DeleteAsync(id);
-        return employee?.ToOutputModel();
-    }
-
-    public async Task<EmployeeOutput?> GetEmployeeWithDetailsAsync(int id)
-    {
-        throw new NotImplementedException();
+        public async Task<int> GetIdByUserIdAsync(string userId)
+        {
+            return await unitOfWork.Employees.GetIdByUserIdAsync(userId);
+        }
     }
 }
-

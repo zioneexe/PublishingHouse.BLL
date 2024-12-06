@@ -1,57 +1,55 @@
-﻿using PublishingHouse.Abstractions.Model;
+﻿using PublishingHouse.Abstractions.Entity;
 using PublishingHouse.Abstractions.Repository;
 using PublishingHouse.Abstractions.Service;
-using PublishingHouse.BLL.Mapper;
-using PublishingHouse.Shared.Model.Input;
-using PublishingHouse.Shared.Model.Output;
+using PublishingHouse.DAL.Data;
 
-namespace PublishingHouse.BLL.Service;
-
-public class BookService(IBookRepository repository) : IBookService
+namespace PublishingHouse.BLL.Service
 {
-    public async Task<List<BookOutput>> GetAllAsync()
+    public class BookService(IUnitOfWork unitOfWork) : IBookService
     {
-        var books = await repository.GetAllAsync();
-        return books.Select(book => book.ToOutputModel()).ToList();
-    }
+        public async Task<IBook> GetByIdAsync(int id)
+        {
+            return await unitOfWork.Books.GetByIdAsync(id);
+        }
 
-    public async Task<BookOutput?> GetByIdAsync(int id)
-    {
-        var book = await repository.GetByIdAsync(id);
-        return book?.ToOutputModel();
-    }
+        public async Task<IEnumerable<IBook>> GetAllAsync()
+        {
+            return await unitOfWork.Books.GetAllAsync();
+        }
 
-    public async Task<BookOutput> AddAsync(BookInput bookInput)
-    {
-        ArgumentNullException.ThrowIfNull(bookInput, nameof(bookInput));
+        public async Task AddAsync(IBook entity)
+        {
+            ArgumentNullException.ThrowIfNull(entity, nameof(entity));
+            entity.CreateDateTime = DateTime.UtcNow;
 
-        var bookEntity = bookInput.ToEntity();
-        var createdBook = await repository.AddAsync(bookEntity);
-        return createdBook.ToOutputModel();
-    }
+            await unitOfWork.Books.AddAsync(entity);
+            await unitOfWork.CompleteAsync();
+        }
 
-    public async Task<BookOutput?> UpdateAsync(int id, BookInput bookInput)
-    {
-        ArgumentNullException.ThrowIfNull(bookInput, nameof(bookInput));
+        public async Task UpdateAsync(int id, IBook entity)
+        {
+            ArgumentNullException.ThrowIfNull(entity, nameof(entity));
+            entity.UpdateDateTime = DateTime.UtcNow;
 
-        var existingBook = await repository.GetByIdAsync(id);
-        if (existingBook == null) return null;
+            await unitOfWork.Books.UpdateAsync(id, entity);
+            await unitOfWork.CompleteAsync();
+        }
 
-        var updatedEntity = bookInput.ToEntity();
-        updatedEntity.BookId = id;
+        public async Task DeleteAsync(int id)
+        {
+            await unitOfWork.Books.DeleteAsync(id);
+            await unitOfWork.CompleteAsync();
+        }
 
-        var updatedBook = await repository.UpdateAsync(id, updatedEntity);
-        return updatedBook?.ToOutputModel();
-    }
+        public async Task<int> AddWithIdAsync(IBook entity)
+        {
+            ArgumentNullException.ThrowIfNull(entity, nameof(entity));
+            entity.CreateDateTime = DateTime.UtcNow;
 
-    public async Task<BookOutput?> DeleteAsync(int id)
-    {
-        var book = await repository.DeleteAsync(id);
-        return book?.ToOutputModel();
-    }
+            var bookId = await unitOfWork.Books.AddWithIdAsync(entity);
+            await unitOfWork.CompleteAsync();
 
-    public async Task<BookOutput?> GetBookWithDetailsAsync(int id)
-    {
-        throw new NotImplementedException();
+            return bookId;
+        }
     }
 }

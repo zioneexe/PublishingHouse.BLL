@@ -1,58 +1,73 @@
-﻿using PublishingHouse.Abstractions.Model;
+﻿using Microsoft.AspNetCore.Identity;
+using PublishingHouse.Abstractions.Entity;
+using PublishingHouse.Abstractions.Exception;
 using PublishingHouse.Abstractions.Repository;
 using PublishingHouse.Abstractions.Service;
-using PublishingHouse.BLL.Mapper;
-using PublishingHouse.Shared.Model.Input;
-using PublishingHouse.Shared.Model.Output;
+using PublishingHouse.DAL.Data;
 
-namespace PublishingHouse.BLL.Service;
-
-public class CustomerService(ICustomerRepository repository) : ICustomerService
+namespace PublishingHouse.BLL.Service
 {
-    public async Task<List<CustomerOutput>> GetAllAsync()
+    public class CustomerService(IUnitOfWork unitOfWork, UserManager<IdentityUser> userManager) : ICustomerService
     {
-        var customers = await repository.GetAllAsync();
-        return customers.Select(customer => customer.ToOutputModel()).ToList();
-    }
+        public async Task<ICustomer> GetByIdAsync(int id)
+        {
+            return await unitOfWork.Customers.GetByIdAsync(id);
+        }
 
-    public async Task<CustomerOutput?> GetByIdAsync(int id)
-    {
-        var customer = await repository.GetByIdAsync(id);
-        return customer?.ToOutputModel();
-    }
+        public async Task<IEnumerable<ICustomer>> GetAllAsync()
+        {
+            return await unitOfWork.Customers.GetAllAsync();
+        }
 
-    public async Task<CustomerOutput> AddAsync(CustomerInput customerInput)
-    {
-        ArgumentNullException.ThrowIfNull(customerInput, nameof(customerInput));
+        public async Task AddAsync(ICustomer entity)
+        {
+            ArgumentNullException.ThrowIfNull(entity, nameof(entity));
+            entity.CreateDateTime = DateTime.UtcNow;
 
-        var customerEntity = customerInput.ToEntity();
-        var createdCustomer = await repository.AddAsync(customerEntity);
-        return createdCustomer.ToOutputModel();
-    }
+            await unitOfWork.Customers.AddAsync(entity);
+            await unitOfWork.CompleteAsync();
+        }
 
-    public async Task<CustomerOutput?> UpdateAsync(int id, CustomerInput customerInput)
-    {
-        ArgumentNullException.ThrowIfNull(customerInput, nameof(customerInput));
+        public async Task UpdateAsync(int id, ICustomer entity)
+        {
+            ArgumentNullException.ThrowIfNull(entity, nameof(entity));
+            entity.UpdateDateTime = DateTime.UtcNow;
 
-        var existingCustomer = await repository.GetByIdAsync(id);
-        if (existingCustomer == null) return null;
+            await unitOfWork.Customers.UpdateAsync(id, entity);
+            await unitOfWork.CompleteAsync();
+        }
 
-        var updatedEntity = customerInput.ToEntity();
-        updatedEntity.CustomerId = id;
+        public async Task DeleteAsync(int id)
+        {
+            await unitOfWork.Customers.DeleteAsync(id);
+            await unitOfWork.CompleteAsync();
+        }
 
-        var updatedCustomer = await repository.UpdateAsync(id, updatedEntity);
-        return updatedCustomer?.ToOutputModel();
-    }
+        public async Task<int> GetIdByUserIdAsync(string userId)
+        {
+            return await unitOfWork.Customers.GetIdByUserIdAsync(userId);
+        }
 
-    public async Task<CustomerOutput?> DeleteAsync(int id)
-    {
-        var customer = await repository.DeleteAsync(id);
-        return customer?.ToOutputModel();
-    }
+        public async Task<bool> HasUserAccess(int accessedId, string userId)
+        {
+            var identityUser = await userManager.FindByIdAsync(userId);
+            if (identityUser is null)
+            {
+                throw new AccessException($"No users found with id {userId}.");
+            }
 
-    public async Task<CustomerOutput?> GetCustomerWithOrdersAsync(int id)
-    {
-        throw new NotImplementedException();
+            var userRoles = await userManager.GetRolesAsync(identityUser);
+            if (userRoles.Contains("Admin"))
+            {
+                return true;
+            }
+
+            if (userRoles.Contains("Employee"))
+            {
+                return accessedId == await GetIdByUserIdAsync(userId);
+            }
+
+            return false;
+        }
     }
 }
-

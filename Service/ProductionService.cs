@@ -1,58 +1,44 @@
-﻿using PublishingHouse.Abstractions.Model;
+﻿using PublishingHouse.Abstractions.Entity;
 using PublishingHouse.Abstractions.Repository;
 using PublishingHouse.Abstractions.Service;
-using PublishingHouse.BLL.Mapper;
-using PublishingHouse.Shared.Model.Input;
-using PublishingHouse.Shared.Model.Output;
+using PublishingHouse.DAL.Data;
 
-namespace PublishingHouse.BLL.Service;
-
-public class ProductionService(IProductionRepository repository) : IProductionService
+namespace PublishingHouse.BLL.Service
 {
-    public async Task<List<ProductionOutput>> GetAllAsync()
+    public class ProductionService(IUnitOfWork unitOfWork) : IProductionService
     {
-        var productions = await repository.GetAllAsync();
-        return productions.Select(production => production.ToOutputModel()).ToList();
-    }
+        public async Task<IProduction> GetByIdAsync(int id)
+        {
+            return await unitOfWork.Productions.GetByIdAsync(id);
+        }
 
-    public async Task<ProductionOutput?> GetByIdAsync(int id)
-    {
-        var production = await repository.GetByIdAsync(id);
-        return production?.ToOutputModel();
-    }
+        public async Task<IEnumerable<IProduction>> GetAllAsync()
+        {
+            return await unitOfWork.Productions.GetAllAsync();
+        }
 
-    public async Task<ProductionOutput> AddAsync(ProductionInput productionInput)
-    {
-        ArgumentNullException.ThrowIfNull(productionInput, nameof(productionInput));
+        public async Task AddAsync(IProduction entity)
+        {
+            ArgumentNullException.ThrowIfNull(entity, nameof(entity));
+            entity.CreateDateTime = DateTime.UtcNow;
 
-        var productionEntity = productionInput.ToEntity();
-        var createdProduction = await repository.AddAsync(productionEntity);
-        return createdProduction.ToOutputModel();
-    }
+            await unitOfWork.Productions.AddAsync(entity);
+            await unitOfWork.CompleteAsync();
+        }
 
-    public async Task<ProductionOutput?> UpdateAsync(int id, ProductionInput productionInput)
-    {
-        ArgumentNullException.ThrowIfNull(productionInput, nameof(productionInput));
+        public async Task UpdateAsync(int id, IProduction entity)
+        {
+            ArgumentNullException.ThrowIfNull(entity, nameof(entity));
+            entity.UpdateDateTime = DateTime.UtcNow;
 
-        var existingProduction = await repository.GetByIdAsync(id);
-        if (existingProduction == null) return null;
+            await unitOfWork.Productions.UpdateAsync(id, entity);
+            await unitOfWork.CompleteAsync();
+        }
 
-        var updatedEntity = productionInput.ToEntity();
-        updatedEntity.ProductionId = id;
-
-        var updatedProduction = await repository.UpdateAsync(id, updatedEntity);
-        return updatedProduction?.ToOutputModel();
-    }
-
-    public async Task<ProductionOutput?> DeleteAsync(int id)
-    {
-        var production = await repository.DeleteAsync(id);
-        return production?.ToOutputModel();
-    }
-
-    public async Task<ProductionOutput?> GetProductionWithDetailsAsync(int id)
-    {
-        throw new NotImplementedException();
+        public async Task DeleteAsync(int id)
+        {
+            await unitOfWork.Productions.DeleteAsync(id);
+            await unitOfWork.CompleteAsync();
+        }
     }
 }
-

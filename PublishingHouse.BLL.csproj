@@ -10,13 +10,13 @@
     <None Remove="Service\NewFile1.txt" />
   </ItemGroup>
 
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\PublishingHouse.Abstractions\PublishingHouse.Abstractions.csproj" />
     <ProjectReference Include="..\PublishingHouse.DAL\PublishingHouse.DAL.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Mapper\" />
   </ItemGroup>
 
 </Project>

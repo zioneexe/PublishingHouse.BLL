@@ -1,57 +1,44 @@
-﻿using PublishingHouse.Abstractions.Repository;
+﻿using PublishingHouse.Abstractions.Entity;
+using PublishingHouse.Abstractions.Repository;
 using PublishingHouse.Abstractions.Service;
-using PublishingHouse.BLL.Mapper;
-using PublishingHouse.Shared.Model.Input;
-using PublishingHouse.Shared.Model.Output;
+using PublishingHouse.DAL.Data;
 
-namespace PublishingHouse.BLL.Service;
-
-public class OrderStatusService(IOrderStatusRepository repository) : IOrderStatusService
+namespace PublishingHouse.BLL.Service
 {
-    public async Task<List<OrderStatusOutput>> GetAllAsync()
+    public class OrderStatusService(IUnitOfWork unitOfWork) : IOrderStatusService
     {
-        var orderStatuses = await repository.GetAllAsync();
-        return orderStatuses.Select(orderStatus => orderStatus.ToOutputModel()).ToList();
-    }
+        public async Task<IOrderStatus> GetByIdAsync(int id)
+        {
+            return await unitOfWork.OrderStatuses.GetByIdAsync(id);
+        }
 
-    public async Task<OrderStatusOutput?> GetByIdAsync(int id)
-    {
-        var orderStatus = await repository.GetByIdAsync(id);
-        return orderStatus?.ToOutputModel();
-    }
+        public async Task<IEnumerable<IOrderStatus>> GetAllAsync()
+        {
+            return await unitOfWork.OrderStatuses.GetAllAsync();
+        }
 
-    public async Task<OrderStatusOutput> AddAsync(OrderStatusInput orderStatusInput)
-    {
-        ArgumentNullException.ThrowIfNull(orderStatusInput, nameof(orderStatusInput));
+        public async Task AddAsync(IOrderStatus entity)
+        {
+            ArgumentNullException.ThrowIfNull(entity, nameof(entity));
+            entity.CreateDateTime = DateTime.UtcNow;
 
-        var orderStatusEntity = orderStatusInput.ToEntity();
-        var createdOrderStatus = await repository.AddAsync(orderStatusEntity);
-        return createdOrderStatus.ToOutputModel();
-    }
+            await unitOfWork.OrderStatuses.AddAsync(entity);
+            await unitOfWork.CompleteAsync();
+        }
 
-    public async Task<OrderStatusOutput?> UpdateAsync(int id, OrderStatusInput orderStatusInput)
-    {
-        ArgumentNullException.ThrowIfNull(orderStatusInput, nameof(orderStatusInput));
+        public async Task UpdateAsync(int id, IOrderStatus entity)
+        {
+            ArgumentNullException.ThrowIfNull(entity, nameof(entity));
+            entity.UpdateDateTime = DateTime.UtcNow;
 
-        var existingOrderStatus = await repository.GetByIdAsync(id);
-        if (existingOrderStatus == null) return null;
+            await unitOfWork.OrderStatuses.UpdateAsync(id, entity);
+            await unitOfWork.CompleteAsync();
+        }
 
-        var updatedEntity = orderStatusInput.ToEntity();
-        updatedEntity.OrderStatusId = id;
-
-        var updatedOrderStatus = await repository.UpdateAsync(id, updatedEntity);
-        return updatedOrderStatus?.ToOutputModel();
-    }
-
-    public async Task<OrderStatusOutput?> DeleteAsync(int id)
-    {
-        var orderStatus = await repository.DeleteAsync(id);
-        return orderStatus?.ToOutputModel();
-    }
-
-    public async Task<OrderStatusOutput?> GetOrderStatusWithPrintOrdersAsync(int id)
-    {
-        throw new NotImplementedException();
+        public async Task DeleteAsync(int id)
+        {
+            await unitOfWork.OrderStatuses.DeleteAsync(id);
+            await unitOfWork.CompleteAsync();
+        }
     }
 }
-

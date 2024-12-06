@@ -1,58 +1,44 @@
-﻿using PublishingHouse.Abstractions.Model;
+﻿using PublishingHouse.Abstractions.Entity;
 using PublishingHouse.Abstractions.Repository;
 using PublishingHouse.Abstractions.Service;
-using PublishingHouse.BLL.Mapper;
-using PublishingHouse.Shared.Model.Input;
-using PublishingHouse.Shared.Model.Output;
+using PublishingHouse.DAL.Data;
 
-namespace PublishingHouse.BLL.Service;
-
-public class CityService(ICityRepository repository) : ICityService
+namespace PublishingHouse.BLL.Service
 {
-    public async Task<List<CityOutput>> GetAllAsync()
+    public class CityService(IUnitOfWork unitOfWork) : ICityService
     {
-        var cities = await repository.GetAllAsync();
-        return cities.Select(city => city.ToOutputModel()).ToList();
-    }
+        public async Task<ICity> GetByIdAsync(int id)
+        {
+            return await unitOfWork.Cities.GetByIdAsync(id);
+        }
 
-    public async Task<CityOutput?> GetByIdAsync(int id)
-    {
-        var city = await repository.GetByIdAsync(id);
-        return city?.ToOutputModel();
-    }
+        public async Task<IEnumerable<ICity>> GetAllAsync()
+        {
+            return await unitOfWork.Cities.GetAllAsync();
+        }
 
-    public async Task<CityOutput> AddAsync(CityInput cityInput)
-    {
-        ArgumentNullException.ThrowIfNull(cityInput, nameof(cityInput));
+        public async Task AddAsync(ICity entity)
+        {
+            ArgumentNullException.ThrowIfNull(entity, nameof(entity));
+            entity.CreateDateTime = DateTime.UtcNow;
 
-        var cityEntity = cityInput.ToEntity();
-        var createdCity = await repository.AddAsync(cityEntity);
-        return createdCity.ToOutputModel();
-    }
+            await unitOfWork.Cities.AddAsync(entity);
+            await unitOfWork.CompleteAsync();
+        }
 
-    public async Task<CityOutput?> UpdateAsync(int id, CityInput cityInput)
-    {
-        ArgumentNullException.ThrowIfNull(cityInput, nameof(cityInput));
+        public async Task UpdateAsync(int id, ICity entity)
+        {
+            ArgumentNullException.ThrowIfNull(entity, nameof(entity));
+            entity.UpdateDateTime = DateTime.UtcNow;
 
-        var existingCity = await repository.GetByIdAsync(id);
-        if (existingCity == null) return null;
+            await unitOfWork.Cities.UpdateAsync(id, entity);
+            await unitOfWork.CompleteAsync();
+        }
 
-        var updatedEntity = cityInput.ToEntity();
-        updatedEntity.CityId = id;
-
-        var updatedCity = await repository.UpdateAsync(id, updatedEntity);
-        return updatedCity?.ToOutputModel();
-    }
-
-    public async Task<CityOutput?> DeleteAsync(int id)
-    {
-        var city = await repository.DeleteAsync(id);
-        return city?.ToOutputModel();
-    }
-
-    public async Task<CityOutput?> GetCityWithDetailsAsync(int id)
-    {
-        throw new NotImplementedException();
+        public async Task DeleteAsync(int id)
+        {
+            await unitOfWork.Cities.DeleteAsync(id);
+            await unitOfWork.CompleteAsync();
+        }
     }
 }
-

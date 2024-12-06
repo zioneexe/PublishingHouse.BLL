@@ -1,58 +1,44 @@
-﻿using PublishingHouse.Abstractions.Model;
+﻿using PublishingHouse.Abstractions.Entity;
 using PublishingHouse.Abstractions.Repository;
 using PublishingHouse.Abstractions.Service;
-using PublishingHouse.BLL.Mapper;
-using PublishingHouse.Shared.Model.Input;
-using PublishingHouse.Shared.Model.Output;
+using PublishingHouse.DAL.Data;
 
-namespace PublishingHouse.BLL.Service;
-
-public class RegionService(IRegionRepository repository) : IRegionService
+namespace PublishingHouse.BLL.Service
 {
-    public async Task<List<RegionOutput>> GetAllAsync()
+    public class RegionService(IUnitOfWork unitOfWork) : IRegionService
     {
-        var regions = await repository.GetAllAsync();
-        return regions.Select(region => region.ToOutputModel()).ToList();
-    }
+        public async Task<IRegion> GetByIdAsync(int id)
+        {
+            return await unitOfWork.Regions.GetByIdAsync(id);
+        }
 
-    public async Task<RegionOutput?> GetByIdAsync(int id)
-    {
-        var region = await repository.GetByIdAsync(id);
-        return region?.ToOutputModel();
-    }
+        public async Task<IEnumerable<IRegion>> GetAllAsync()
+        {
+            return await unitOfWork.Regions.GetAllAsync();
+        }
 
-    public async Task<RegionOutput> AddAsync(RegionInput regionInput)
-    {
-        ArgumentNullException.ThrowIfNull(regionInput, nameof(regionInput));
+        public async Task AddAsync(IRegion entity)
+        {
+            ArgumentNullException.ThrowIfNull(entity, nameof(entity));
+            entity.CreateDateTime = DateTime.UtcNow;
 
-        var regionEntity = regionInput.ToEntity();
-        var createdRegion = await repository.AddAsync(regionEntity);
-        return createdRegion.ToOutputModel();
-    }
+            await unitOfWork.Regions.AddAsync(entity);
+            await unitOfWork.CompleteAsync();
+        }
 
-    public async Task<RegionOutput?> UpdateAsync(int id, RegionInput regionInput)
-    {
-        ArgumentNullException.ThrowIfNull(regionInput, nameof(regionInput));
+        public async Task UpdateAsync(int id, IRegion entity)
+        {
+            ArgumentNullException.ThrowIfNull(entity, nameof(entity));
+            entity.UpdateDateTime = DateTime.UtcNow;
 
-        var existingRegion = await repository.GetByIdAsync(id);
-        if (existingRegion == null) return null;
+            await unitOfWork.Regions.UpdateAsync(id, entity);
+            await unitOfWork.CompleteAsync();
+        }
 
-        var updatedEntity = regionInput.ToEntity();
-        updatedEntity.RegionId = id;
-
-        var updatedRegion = await repository.UpdateAsync(id, updatedEntity);
-        return updatedRegion?.ToOutputModel();
-    }
-
-    public async Task<RegionOutput?> DeleteAsync(int id)
-    {
-        var region = await repository.DeleteAsync(id);
-        return region?.ToOutputModel();
-    }
-
-    public async Task<RegionOutput?> GetRegionWithCitiesAsync(int id)
-    {
-        throw new NotImplementedException();
+        public async Task DeleteAsync(int id)
+        {
+            await unitOfWork.Regions.DeleteAsync(id);
+            await unitOfWork.CompleteAsync();
+        }
     }
 }
-
